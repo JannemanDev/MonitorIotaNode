@@ -34,7 +34,10 @@ namespace MonitorIotaNode
 
         private void Watcher_Changed(object sender, FileSystemEventArgs e)
         {
-            if ((DateTime.Now - LastChange).Seconds > minimumFileAgeInSeconds && !IsFileLocked(e.FullPath)) //Avoid code executing multiple times  
+            Log.Logger.Debug($"Watcher_Changed called");
+            int fileAgeInSeconds = (DateTime.Now - LastChange).Seconds;
+            Log.Logger.Debug($"Fileage is {fileAgeInSeconds}");
+            if (fileAgeInSeconds > minimumFileAgeInSeconds && !IsFileLocked(e.FullPath)) //Avoid code executing multiple times  
             {
                 Log.Logger.Information($"Settings in {watcher.Filter} changed!");
                 LastChange = DateTime.Now;
@@ -52,6 +55,7 @@ namespace MonitorIotaNode
             }
             catch (IOException)
             {
+                Log.Logger.Warning($"File {filePath} locked");
                 return true;
             }
             finally

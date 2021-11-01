@@ -20,23 +20,20 @@ namespace MonitorIotaNode
 
         private static Dictionary<Uri, NodeInfo> previousNodeInfos = new Dictionary<Uri, NodeInfo>();
 
-        // status info:
-        //  totalMessageCount (plus delta since last time)
-        //  mana.access, mana.consensus (plus delta since last time)
-
         static void Main(string[] args)
         {
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Verbose() //send all events to sinks
-                .WriteTo.Console(restrictedToMinimumLevel: LogEventLevel.Information) //Todo: be configurable
-                .WriteTo.File("log.txt", //Todo: be configurable
+                .WriteTo.Console(restrictedToMinimumLevel: LogEventLevel.Debug) //Todo: be configurable
+                .WriteTo.File("Logs/log.txt", //Todo: be configurable
                     rollingInterval: RollingInterval.Day,
                     rollOnFileSizeLimit: true,
                     restrictedToMinimumLevel: LogEventLevel.Verbose) //Todo: be configurable
                 .CreateLogger();
 
             Log.Logger.Information(("Monitor IOTA Nodes v0.1\n"));
-            Log.Logger.Information(" Escape to quit");
+            Log.Logger.Information(" <Escape> to quit");
+            Log.Logger.Information(" <L> force reload of settings");
 
             settingsFile = ParseArguments(args);
 
@@ -63,24 +60,37 @@ namespace MonitorIotaNode
                 {
                     ConsoleKeyInfo cki = Console.ReadKey(true);
                     if (cki.Key == ConsoleKey.Escape) Environment.Exit(0);
+                    if (cki.Key == ConsoleKey.L) ReloadSettings();
                 }
             }
         }
 
         private static void ReloadSettings()
         {
+            Log.Logger.Information($"Reloading settings");
             settings = Settings.LoadSettings(settingsFile);
             SetTimers();
         }
 
         private static void SetTimers()
         {
+            Log.Logger.Information($"Deleting previous timer(s)");
             //clear timers because enabled and interval settings can be changed
             timerStatusCheck?.Dispose();
             timerSyncCheck?.Dispose();
 
-            if (settings.StatusCheckInterval.Enabled) timerStatusCheck = new Timer(TimerStatusCheck_Interval, null, 0, settings.StatusCheckInterval.IntervalInMinutes * 60 * 1000);
-            if (settings.SyncCheckInterval.Enabled) timerSyncCheck = new Timer(TimerSyncCheck_Interval, null, 0, settings.SyncCheckInterval.IntervalInMinutes * 60 * 1000);
+            if (settings.StatusCheckInterval.Enabled)
+            {
+                timerStatusCheck = new Timer(TimerStatusCheck_Interval, null, 0, settings.StatusCheckInterval.IntervalInMinutes * 60 * 1000);
+                Log.Logger.Information($"Setting Status Check timer to {settings.StatusCheckInterval.IntervalInMinutes} minute(s)");
+
+            }
+            if (settings.SyncCheckInterval.Enabled)
+            {
+                timerSyncCheck = new Timer(TimerSyncCheck_Interval, null, 0, settings.SyncCheckInterval.IntervalInMinutes * 60 * 1000);
+                Log.Logger.Information($"Setting Sync Check timer to {settings.SyncCheckInterval.IntervalInMinutes} minute(s)");
+
+            }
         }
 
         private static void CheckStatus()
@@ -169,9 +179,9 @@ namespace MonitorIotaNode
 
         private static void SettingsChanged(SettingsWatcher settingsWatcher)
         {
-            Log.Logger.Information($"Settings in {settingsWatcher.Filename} changed! Reloading... New settings are:");
+            Log.Logger.Information($"Settings in {settingsWatcher.Filename} changed!");
             ReloadSettings();
-            Log.Logger.Information($"{settings}");
+            Log.Logger.Information($"New settings are:\n{settings}");
         }
 
         private static string ParseArguments(string[] args)

@@ -24,8 +24,6 @@ dotnet publish Source\MonitorIotaNode\MonitorIotaNode.csproj /p:PublishProfile=S
 
 rem .NET Core 3.1
 dotnet publish Source\MonitorIotaNode\MonitorIotaNode.csproj /p:PublishProfile=Source\MonitorIotaNode\Properties\PublishProfiles\linux-arm-netcoreapp3.1.pubxml --configuration Release
-rem Workaround: Somehow Settings.ini does not get copied to publish folder, only to output folder?!
-copy Source\MonitorIotaNode\bin\Release\netcoreapp3.1\linux-arm\Settings.ini Source\MonitorIotaNode\bin\Release\netcoreapp3.1\publish\linux-arm\
 
 rem Rar all MonitorIotaNode builds
 rem .NET Core 5
