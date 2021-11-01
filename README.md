@@ -56,3 +56,8 @@ Cross platform .NET 5 util, which is very easy to use and requires no external d
 ```
 # Current limitations
 On Unix/Linux machines auto reload when settings are changed doesn't work because of a limitation of `FileSystemWatcher`.
+
+# Next release / roadmap / todo
+- finding a workaround for Unix/Linux limitation of `FileSystemWatcher`  
+- beside push notification also support sending a notification email  
+- ...
