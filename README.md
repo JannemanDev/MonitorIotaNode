@@ -16,7 +16,7 @@ Cross platform .NET 5 util, which is very easy to use and requires no external d
 
 # Installation
 1. Pick the correct build (For `Synology DS720+ NAS` use `linux-x64-net5.0` and ignore the `no version information available` warning, for `Ubuntu` use `linux-x64-net5.0`)
-2. Run `MonitorIotaNode` will create an empty `settings.json` file with default values. Review it and fill in the placeholder texts.
+2. Run `MonitorIotaNode` will create an empty `settings.json` file with default values. Review it and fill in the placeholder texts. You can find the Pushover `UserKey` when you login on Pushover. For the `ApiKey` you first have to [Create an Application/API Token](https://pushover.net/apps/build).
 3. Run again
 
 # Settings
