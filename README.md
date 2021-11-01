@@ -55,7 +55,8 @@ Cross platform .NET 5 util, which is very easy to use and requires no external d
 
 ```
 # Current limitations
-On Unix/Linux machines auto reload when settings are changed doesn't work because of a limitation of `FileSystemWatcher`.
+-On Unix/Linux machines auto reload when settings are changed doesn't work because of a limitation of `FileSystemWatcher`.  
+-If you are using The Goshimmer Node Dashboard website (see `IotaNodes > DashboardUrl` in `settings.json`) mind you that it's currently not supported on mobile webbrowsers. You will see a webpage but nothing gets updated.
 
 # Next release / roadmap / todo
 - finding a workaround for Unix/Linux limitation of `FileSystemWatcher`  
