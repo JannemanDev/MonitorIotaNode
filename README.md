@@ -12,6 +12,8 @@ Cross platform .NET 5 util, which is very easy to use and requires no external d
 -Push notification to one or more devices (Android, iPhone, iPad, and Desktop (Android Wear and Apple Watch, too!)  
 -Everything is configurable and optional, see `settings.json` (after first time run)  
 
+<img src="https://user-images.githubusercontent.com/13236774/139660066-e8650529-42a3-442e-9dc6-79de4ddda25c.PNG" alt="push notification" width="250"/>
+
 # Installation
 1. Pick the correct build (For `Synology DS720+ NAS` use `linux-x64-net5.0` and ignore the `no version information available` warning, for `Ubuntu` use `linux-x64-net5.0`)
 2. Run `MonitorIotaNode` will create an empty `settings.json` file with default values. Review it and fill in the placeholder texts.
@@ -40,6 +42,7 @@ Cross platform .NET 5 util, which is very easy to use and requires no external d
   "PushOver": {
     "Enabled": true,
     "ApiKey": "...",
+
     "UserKey": "...",
     "Devices": [
       {
