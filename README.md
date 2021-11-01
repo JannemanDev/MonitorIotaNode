@@ -7,7 +7,7 @@ Cross platform .NET 5 util, which is very easy to use and requires no external d
 -Get Push notification when a node goes unsynced  
 -Get Push notification about the status of a node  
 -Status and/or Sync checking can be set per node  
--Auto reload settings.json when it's changed  
+-Auto reload settings.json when it's changed (currently only supported on Windows)  
 -Logging to a file and console  
 -Push notification to one or more devices (Android, iPhone, iPad, and Desktop (Android Wear and Apple Watch, too!)  
 -Everything is configurable and optional, see `settings.json` (after first time run)  
