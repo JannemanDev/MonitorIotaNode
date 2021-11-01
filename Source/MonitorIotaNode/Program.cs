@@ -74,7 +74,7 @@ namespace MonitorIotaNode
 
         private static void SetTimers()
         {
-            Log.Logger.Information($"Deleting previous timer(s)");
+            Log.Logger.Debug($"Deleting previous timer(s)");
             //clear timers because enabled and interval settings can be changed
             timerStatusCheck?.Dispose();
             timerSyncCheck?.Dispose();
@@ -167,13 +167,13 @@ namespace MonitorIotaNode
 
         private static void TimerStatusCheck_Interval(Object o)
         {
-            Log.Logger.Information("In TimerStatusCheck_Interval: " + DateTime.Now);
+            Log.Logger.Debug("In TimerStatusCheck_Interval: " + DateTime.Now);
             CheckStatus();
         }
 
         private static void TimerSyncCheck_Interval(Object o)
         {
-            Log.Logger.Information("In TimerSyncCheck_Interval: " + DateTime.Now);
+            Log.Logger.Debug("In TimerSyncCheck_Interval: " + DateTime.Now);
             CheckSync();
         }
 
