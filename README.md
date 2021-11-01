@@ -61,5 +61,5 @@ Cross platform .NET 5 util, which is very easy to use and requires no external d
 # Next release / roadmap / todo
 - finding a workaround for Unix/Linux limitation of `FileSystemWatcher`  
 - beside push notification also support sending a notification email  
-- adding configurable SeriLog settings in `settings.json`
+- adding configurable `SeriLog` settings in `settings.json`
 - ...
