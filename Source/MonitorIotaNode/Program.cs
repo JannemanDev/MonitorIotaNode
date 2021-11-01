@@ -110,7 +110,7 @@ namespace MonitorIotaNode
                     Mana deltaMana = nodeInfo.Mana - previousNodeInfo.Mana;
                     Mana deltaManaPercentage = (deltaMana / previousNodeInfo.Mana) * 100;
 
-                    deltaManaMessage = $"Change in Access Mana={deltaMana.Access}({deltaManaPercentage.Access:0.##}%)\nChange in Consensus Mana={deltaMana.Consensus}({deltaManaPercentage.Consensus:0.##}%)\n";
+                    deltaManaMessage = $"Change in Access Mana={deltaMana.Access:0}({deltaManaPercentage.Access:0.##}%)\nChange in Consensus Mana={deltaMana.Consensus:0}({deltaManaPercentage.Consensus:0.##}%)\n";
                     Log.Logger.Information(deltaManaMessage);
 
                     int deltaTotalMessageCount = nodeInfo.TotalMessageCount - previousNodeInfo.TotalMessageCount;
