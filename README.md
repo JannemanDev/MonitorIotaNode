@@ -60,4 +60,5 @@ On Unix/Linux machines auto reload when settings are changed doesn't work becaus
 # Next release / roadmap / todo
 - finding a workaround for Unix/Linux limitation of `FileSystemWatcher`  
 - beside push notification also support sending a notification email  
+- adding configurable SeriLog settings in `settings.json`
 - ...
