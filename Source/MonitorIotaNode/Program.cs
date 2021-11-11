@@ -17,7 +17,7 @@ namespace MonitorIotaNode
         private static string settingsFile;
         private static Timer timerStatusCheck = null;
         private static Timer timerSyncCheck = null;
-
+        private static bool prevStateSynced = true;
         private static Dictionary<Uri, NodeInfo> previousNodeInfos = new Dictionary<Uri, NodeInfo>();
 
         static void Main(string[] args)
@@ -147,20 +147,43 @@ namespace MonitorIotaNode
                 NodeEndpoint nodeEndpoint = new NodeEndpoint(iotaNode.InfoUrl);
                 NodeInfo nodeInfo = nodeEndpoint.RetrieveNodeInfo();
 
-                if (!nodeInfo.TangleTime.Synced)
+                if (!nodeInfo.TangleTime.Synced) //out of sync...
                 {
-                    string title = $"Node {nodeInfo.IdentityIdShort} NOT synced!";
-                    string message = $"Version {nodeInfo.Version}\nNetworkVersion {nodeInfo.NetworkVersion}\n" +
-                                     $"{nodeInfo.TangleTime}\n" +
-                                     $"Messages (solid/total): {nodeInfo.SolidMessageCount}/{nodeInfo.TotalMessageCount}\n" +
-                                     $"{nodeInfo.Mana}\n" +
-                                     $"Info: {iotaNode.InfoUrl.AbsoluteUri}";
+                    if (prevStateSynced) //...and not out of sync last time (to avoid sending repeatedly)
+                    {
+                        prevStateSynced = false;
+                        string title = $"Node {nodeInfo.IdentityIdShort} NOT synced!";
+                        string message = $"Version {nodeInfo.Version}\nNetworkVersion {nodeInfo.NetworkVersion}\n" +
+                                         $"{nodeInfo.TangleTime}\n" +
+                                         $"Messages (solid/total): {nodeInfo.SolidMessageCount}/{nodeInfo.TotalMessageCount}\n" +
+                                         $"{nodeInfo.Mana}\n" +
+                                         $"Info: {iotaNode.InfoUrl.AbsoluteUri}";
 
-                    if (iotaNode.DashboardUrl?.AbsoluteUri.Length > 0) message += $"\nDashboard: {iotaNode.DashboardUrl.AbsoluteUri}";
+                        if (iotaNode.DashboardUrl?.AbsoluteUri.Length > 0) message += $"\nDashboard: {iotaNode.DashboardUrl.AbsoluteUri}";
 
-                    Log.Logger.Information($"Sending a notification:\n{title}\n{message}");
+                        Log.Logger.Information($"Sending a notification:\n{title}\n{message}");
 
-                    SendNotifications(settings.PushOver.ApiKey, settings.PushOver.UserKey, settings.IncludedDeviceNames, title, message);
+                        SendNotifications(settings.PushOver.ApiKey, settings.PushOver.UserKey, settings.IncludedDeviceNames, title, message);
+                    }
+                }
+                else //in sync...
+                {
+                    if (!prevStateSynced) //...but last time not in sync
+                    {
+                        prevStateSynced = true;
+                        string title = $"Node {nodeInfo.IdentityIdShort} back to synced!";
+                        string message = $"Version {nodeInfo.Version}\nNetworkVersion {nodeInfo.NetworkVersion}\n" +
+                                         $"{nodeInfo.TangleTime}\n" +
+                                         $"Messages (solid/total): {nodeInfo.SolidMessageCount}/{nodeInfo.TotalMessageCount}\n" +
+                                         $"{nodeInfo.Mana}\n" +
+                                         $"Info: {iotaNode.InfoUrl.AbsoluteUri}";
+
+                        if (iotaNode.DashboardUrl?.AbsoluteUri.Length > 0) message += $"\nDashboard: {iotaNode.DashboardUrl.AbsoluteUri}";
+
+                        Log.Logger.Information($"Sending a notification:\n{title}\n{message}");
+
+                        SendNotifications(settings.PushOver.ApiKey, settings.PushOver.UserKey, settings.IncludedDeviceNames, title, message);
+                    }
                 }
             }
         }
