@@ -8,16 +8,17 @@ using Serilog.Events;
 using System.Linq;
 using RestSharp;
 using System.Threading;
+using System.Net;
 
 namespace MonitorIotaNode
 {
+    //Todo: if node goes offline do handle exceptions!
     class Program
     {
         public static Settings settings;
         private static string settingsFile;
         private static Timer timerStatusCheck = null;
         private static Timer timerSyncCheck = null;
-        private static bool prevStateSynced = true;
         private static Dictionary<Uri, NodeInfo> previousNodeInfos = new Dictionary<Uri, NodeInfo>();
 
         static void Main(string[] args)
@@ -59,7 +60,11 @@ namespace MonitorIotaNode
                 if (Console.KeyAvailable)
                 {
                     ConsoleKeyInfo cki = Console.ReadKey(true);
-                    if (cki.Key == ConsoleKey.Escape) Environment.Exit(0);
+                    if (cki.Key == ConsoleKey.Escape)
+                    {
+                        ClearTimers();
+                        Environment.Exit(0);
+                    }
                     if (cki.Key == ConsoleKey.L) ReloadSettings();
                 }
             }
@@ -68,28 +73,70 @@ namespace MonitorIotaNode
         private static void ReloadSettings()
         {
             Log.Logger.Information($"Reloading settings");
+
+            Settings prevSettings = settings;
             settings = Settings.LoadSettings(settingsFile);
+
+            //only copy settings when available
+            if (prevSettings != null)
+            {
+                //copy previous nodes states from previous settings to new settings if node still exist in new settings
+                for (int i = 0; i < settings.IotaNodes.Count; i++)
+                {
+                    IotaNode currentIotaNode = settings.IotaNodes[i];
+                    IotaNode previousIotaNode = prevSettings.IotaNodes.SingleOrDefault(node => node.InfoUrl == currentIotaNode.InfoUrl);
+                    if (previousIotaNode != null)
+                    {
+                        Log.Logger.Debug($"Found same node {previousIotaNode.InfoUrl} from previous settings in the nodes from the new settings. Copying state: PrevStateNodeDown:{previousIotaNode.PrevStateNodeDown} PrevStateSynced:{previousIotaNode.PrevStateSynced}");
+                        currentIotaNode.PrevStateNodeDown = previousIotaNode.PrevStateNodeDown;
+                        currentIotaNode.PrevStateSynced = previousIotaNode.PrevStateSynced;
+                    }
+                }
+
+                //keep previous nodes which are not in new settings and set include to false
+                List<IotaNode> previousNodesToKeep = prevSettings.IotaNodes
+                    .Where(prevNode => !settings.IotaNodes.Exists(node => node.InfoUrl == prevNode.InfoUrl))
+                    .ToList();
+
+                if (previousNodesToKeep.Count > 0)
+                {
+                    Log.Logger.Debug($"Keeping {previousNodesToKeep.Count} old nodes which are not in the new settings");
+
+                    previousNodesToKeep.ForEach(node =>
+                    {
+                        node.IncludeForStatusCheck = false;
+                        node.IncludeForSyncCheck = false;
+                    });
+
+                    settings.IotaNodes.AddRange(previousNodesToKeep);
+                }
+                else Log.Logger.Debug($"No nodes from previous settings needed to keep");
+            }
+
             SetTimers();
         }
 
-        private static void SetTimers()
+        private static void ClearTimers()
         {
             Log.Logger.Debug($"Deleting previous timer(s)");
             //clear timers because enabled and interval settings can be changed
             timerStatusCheck?.Dispose();
             timerSyncCheck?.Dispose();
+        }
+
+        private static void SetTimers()
+        {
+            ClearTimers();
 
             if (settings.StatusCheckInterval.Enabled)
             {
                 timerStatusCheck = new Timer(TimerStatusCheck_Interval, null, 0, settings.StatusCheckInterval.IntervalInMinutes * 60 * 1000);
                 Log.Logger.Information($"Setting Status Check timer to {settings.StatusCheckInterval.IntervalInMinutes} minute(s)");
-
             }
             if (settings.SyncCheckInterval.Enabled)
             {
                 timerSyncCheck = new Timer(TimerSyncCheck_Interval, null, 0, settings.SyncCheckInterval.IntervalInMinutes * 60 * 1000);
                 Log.Logger.Information($"Setting Sync Check timer to {settings.SyncCheckInterval.IntervalInMinutes} minute(s)");
-
             }
         }
 
@@ -98,46 +145,110 @@ namespace MonitorIotaNode
             foreach (IotaNode iotaNode in settings.IncludedNodesForStatusCheck)
             {
                 NodeEndpoint nodeEndpoint = new NodeEndpoint(iotaNode.InfoUrl);
-                NodeInfo nodeInfo = nodeEndpoint.RetrieveNodeInfo();
-
-                NodeInfo previousNodeInfo;
-                bool previousAvailable = previousNodeInfos.TryGetValue(iotaNode.InfoUrl, out previousNodeInfo);
-
-                string deltaManaMessage = "";
-                string deltaTotalMessageCountMessage = "";
-                if (previousAvailable)
+                NodeInfo nodeInfo = null;
+                bool success = true;
+                try
                 {
-                    Mana deltaMana = nodeInfo.Mana - previousNodeInfo.Mana;
-                    Mana deltaManaPercentage = (deltaMana / previousNodeInfo.Mana) * 100;
-
-                    deltaManaMessage = $"Change in Access Mana={deltaMana.Access:0}({deltaManaPercentage.Access:0.##}%)\nChange in Consensus Mana={deltaMana.Consensus:0}({deltaManaPercentage.Consensus:0.##}%)\n";
-                    Log.Logger.Information(deltaManaMessage);
-
-                    int deltaTotalMessageCount = nodeInfo.TotalMessageCount - previousNodeInfo.TotalMessageCount;
-                    decimal deltaTotalMessageCountPercentage = ((decimal)deltaTotalMessageCount / previousNodeInfo.TotalMessageCount) * 100;
-                    deltaTotalMessageCountMessage = $"Change in Total Message Count={deltaTotalMessageCount}({deltaTotalMessageCountPercentage:0.###}%)\n";
-                    Log.Logger.Information(deltaTotalMessageCountMessage);
-
-
-                    previousNodeInfos[iotaNode.InfoUrl] = nodeInfo; //does exist so update
+                    //node can be down so catch exception
+                    nodeInfo = nodeEndpoint.RetrieveNodeInfo();
                 }
-                else previousNodeInfos.Add(iotaNode.InfoUrl, nodeInfo); //is new so add
+                catch (Exception)
+                {
+                    success = false;
+                    Log.Logger.Error($"Error retrieving node info from {iotaNode.InfoUrl}");
+                }
 
-                string title = $"Status of Node {nodeInfo.IdentityIdShort}";
-                string message = $"Version {nodeInfo.Version}\nNetworkVersion {nodeInfo.NetworkVersion}\n" +
-                                 $"{nodeInfo.TangleTime}\n" +
-                                 $"Messages (solid/total): {nodeInfo.SolidMessageCount}/{nodeInfo.TotalMessageCount}\n" +
-                                 $"{deltaTotalMessageCountMessage}" +
-                                 $"{nodeInfo.Mana}\n" +
-                                 $"{deltaManaMessage}" +
-                                 $"Info: {iotaNode.InfoUrl.AbsoluteUri}";
+                if (success)
+                {
+                    NodeInfo previousNodeInfo;
+                    bool previousNodeInfoAvailable = previousNodeInfos.TryGetValue(iotaNode.InfoUrl, out previousNodeInfo);
 
-                if (iotaNode.DashboardUrl?.AbsoluteUri.Length > 0) message += $"\nDashboard: {iotaNode.DashboardUrl.AbsoluteUri}";
+                    string title = $"Status of Node {nodeInfo.IdentityIdShort}";
+                    string message = $"Version {nodeInfo.Version}\nNetworkVersion {nodeInfo.NetworkVersion}\n" +
+                                     $"{nodeInfo.TangleTime}\n" +
+                                     $"Messages (solid/total): {nodeInfo.SolidMessageCount}/{nodeInfo.TotalMessageCount}\n";
 
-                Log.Logger.Information($"Sending a notification:\n{title}\n{message}");
+                    if (previousNodeInfoAvailable)
+                    {
+                        Mana deltaMana = nodeInfo.Mana - previousNodeInfo.Mana;
+                        //Access mana delta
+                        string deltaManaAccessPercentageAsStr = "n/a";
+                        if (previousNodeInfo.Mana.Access != 0)
+                        {
+                            decimal deltaManaAccessPercentage = (deltaMana.Access / previousNodeInfo.Mana.Access) * 100;
+                            deltaManaAccessPercentageAsStr = $"{deltaManaAccessPercentage:0.##}%";
+                        }
 
-                SendNotifications(settings.PushOver.ApiKey, settings.PushOver.UserKey, settings.IncludedDeviceNames, title, message);
+                        //Consensus mana delta
+                        string deltaManaConsensusPercentageAsStr = "n/a";
+                        if (previousNodeInfo.Mana.Consensus != 0)
+                        {
+                            decimal deltaManaConsensusPercentage = (deltaMana.Consensus / previousNodeInfo.Mana.Consensus) * 100;
+                            deltaManaConsensusPercentageAsStr = $"{deltaManaConsensusPercentage:0.##}%";
+                        }
+
+                        string deltaManaMessage = $"Change in Access Mana={deltaMana.Access:0}({deltaManaAccessPercentageAsStr})\nChange in Consensus Mana={deltaMana.Consensus:0}({deltaManaConsensusPercentageAsStr})\n";
+
+                        //Total Messages Count delta
+                        int deltaTotalMessageCount = nodeInfo.TotalMessageCount - previousNodeInfo.TotalMessageCount;
+                        string deltaTotalMessageCountPercentageAsStr = "n/a";
+                        if (previousNodeInfo.TotalMessageCount > 0)
+                        {
+                            decimal deltaTotalMessageCountPercentage = ((decimal)deltaTotalMessageCount / previousNodeInfo.TotalMessageCount) * 100;
+                            deltaTotalMessageCountPercentageAsStr = $"{deltaTotalMessageCountPercentage:0.###}%";
+                        }
+
+                        string deltaTotalMessageCountMessage = $"Change in Total Message Count={deltaTotalMessageCount}({deltaTotalMessageCountPercentageAsStr})\n";
+
+                        message += $"{deltaTotalMessageCountMessage}" +
+                                         $"{nodeInfo.Mana}\n" +
+                                         $"{deltaManaMessage}\n";
+
+                        previousNodeInfos[iotaNode.InfoUrl] = nodeInfo; //does exist so update
+                    }
+                    else
+                    {
+                        message += $"{nodeInfo.Mana}\n";
+
+                        previousNodeInfos.Add(iotaNode.InfoUrl, nodeInfo); //is new so add
+                    }
+
+                    message += $"Info: {iotaNode.InfoUrl.AbsoluteUri}";
+
+                    if (iotaNode.DashboardUrl?.AbsoluteUri.Length > 0) message += $"\nDashboard: {iotaNode.DashboardUrl.AbsoluteUri}";
+
+                    if (iotaNode.PrevStateNodeDown)
+                    {
+                        iotaNode.PrevStateNodeDown = false; //reset because now node is back online
+                        message = $"Node is back online!\n" + message;
+                    }
+
+                    Log.Logger.Information($"Sending a notification:\n{title}\n{message}");
+
+                    SendNotifications(settings.PushOver.ApiKey, settings.PushOver.UserKey, settings.IncludedDeviceNames, title, message);
+
+                }
+                else //node is down
+                {
+                    if (!iotaNode.PrevStateNodeDown) //only sent notification when node first offline
+                    {
+                        SendNotificationWhenNodeIsDown(iotaNode);
+                    }
+                    iotaNode.PrevStateNodeDown = true;
+                }
             }
+        }
+
+        private static void SendNotificationWhenNodeIsDown(IotaNode iotaNode)
+        {
+            string title = $"Status: Node not reachable";
+            string message = $"Info: {iotaNode.InfoUrl.AbsoluteUri}";
+
+            if (iotaNode.DashboardUrl?.AbsoluteUri.Length > 0) message += $"\nDashboard: {iotaNode.DashboardUrl.AbsoluteUri}";
+
+            Log.Logger.Information($"Sending a notification:\n{title}\n{message}");
+
+            SendNotifications(settings.PushOver.ApiKey, settings.PushOver.UserKey, settings.IncludedDeviceNames, title, message);
         }
 
         private static void CheckSync()
@@ -145,45 +256,66 @@ namespace MonitorIotaNode
             foreach (IotaNode iotaNode in settings.IncludedNodesForSyncCheck)
             {
                 NodeEndpoint nodeEndpoint = new NodeEndpoint(iotaNode.InfoUrl);
-                NodeInfo nodeInfo = nodeEndpoint.RetrieveNodeInfo();
-
-                if (!nodeInfo.TangleTime.Synced) //out of sync...
+                NodeInfo nodeInfo = null;
+                bool success = true;
+                try
                 {
-                    if (prevStateSynced) //...and not out of sync last time (to avoid sending repeatedly)
-                    {
-                        prevStateSynced = false;
-                        string title = $"Node {nodeInfo.IdentityIdShort} NOT synced!";
-                        string message = $"Version {nodeInfo.Version}\nNetworkVersion {nodeInfo.NetworkVersion}\n" +
-                                         $"{nodeInfo.TangleTime}\n" +
-                                         $"Messages (solid/total): {nodeInfo.SolidMessageCount}/{nodeInfo.TotalMessageCount}\n" +
-                                         $"{nodeInfo.Mana}\n" +
-                                         $"Info: {iotaNode.InfoUrl.AbsoluteUri}";
-
-                        if (iotaNode.DashboardUrl?.AbsoluteUri.Length > 0) message += $"\nDashboard: {iotaNode.DashboardUrl.AbsoluteUri}";
-
-                        Log.Logger.Information($"Sending a notification:\n{title}\n{message}");
-
-                        SendNotifications(settings.PushOver.ApiKey, settings.PushOver.UserKey, settings.IncludedDeviceNames, title, message);
-                    }
+                    //node can be down so catch exception
+                    nodeInfo = nodeEndpoint.RetrieveNodeInfo();
                 }
-                else //in sync...
+                catch (Exception)
                 {
-                    if (!prevStateSynced) //...but last time not in sync
+                    success = false;
+                    Log.Logger.Error($"Error retrieving node info from {iotaNode.InfoUrl}");
+                }
+
+                if (success)
+                {
+                    string title;
+                    string message;
+
+                    message = $"Version {nodeInfo.Version}\nNetworkVersion {nodeInfo.NetworkVersion}\n" +
+                                     $"{nodeInfo.TangleTime}\n" +
+                                     $"Messages (solid/total): {nodeInfo.SolidMessageCount}/{nodeInfo.TotalMessageCount}\n" +
+                                     $"{nodeInfo.Mana}\n" +
+                                     $"Info: {iotaNode.InfoUrl.AbsoluteUri}";
+
+                    if (iotaNode.DashboardUrl?.AbsoluteUri.Length > 0) message += $"\nDashboard: {iotaNode.DashboardUrl.AbsoluteUri}";
+
+                    if (!nodeInfo.TangleTime.Synced) //out of sync...
                     {
-                        prevStateSynced = true;
-                        string title = $"Node {nodeInfo.IdentityIdShort} back to synced!";
-                        string message = $"Version {nodeInfo.Version}\nNetworkVersion {nodeInfo.NetworkVersion}\n" +
-                                         $"{nodeInfo.TangleTime}\n" +
-                                         $"Messages (solid/total): {nodeInfo.SolidMessageCount}/{nodeInfo.TotalMessageCount}\n" +
-                                         $"{nodeInfo.Mana}\n" +
-                                         $"Info: {iotaNode.InfoUrl.AbsoluteUri}";
-
-                        if (iotaNode.DashboardUrl?.AbsoluteUri.Length > 0) message += $"\nDashboard: {iotaNode.DashboardUrl.AbsoluteUri}";
-
-                        Log.Logger.Information($"Sending a notification:\n{title}\n{message}");
-
-                        SendNotifications(settings.PushOver.ApiKey, settings.PushOver.UserKey, settings.IncludedDeviceNames, title, message);
+                        if (iotaNode.PrevStateSynced) //...and not out of sync last time (to avoid sending repeatedly)
+                        {
+                            iotaNode.PrevStateSynced = false;
+                            if (iotaNode.PrevStateNodeDown) title = $"Node {nodeInfo.IdentityIdShort} back online but still NOT synced!";
+                            else title = $"Node {nodeInfo.IdentityIdShort} NOT synced!";
+                            Log.Logger.Information($"Sending a notification:\n{title}\n{message}");
+                            SendNotifications(settings.PushOver.ApiKey, settings.PushOver.UserKey, settings.IncludedDeviceNames, title, message);
+                        }
                     }
+                    else //in sync...
+                    {
+                        if (!iotaNode.PrevStateSynced) //...but last time not in sync
+                        {
+                            iotaNode.PrevStateSynced = true;
+                            if (iotaNode.PrevStateNodeDown) title = $"Node {nodeInfo.IdentityIdShort} back online and synced again!";
+                            else title = $"Node {nodeInfo.IdentityIdShort} synced again!";
+                            Log.Logger.Information($"Sending a notification:\n{title}\n{message}");
+
+                            SendNotifications(settings.PushOver.ApiKey, settings.PushOver.UserKey, settings.IncludedDeviceNames, title, message);
+                        }
+                    }
+
+                    iotaNode.PrevStateNodeDown = false; //reset because now node is (back) online (although could be unsynced)
+
+                }
+                else //node is down
+                {
+                    if (!iotaNode.PrevStateNodeDown) //only sent notification when node first offline
+                    {
+                        SendNotificationWhenNodeIsDown(iotaNode);
+                    }
+                    iotaNode.PrevStateNodeDown = true;
                 }
             }
         }
@@ -247,11 +379,15 @@ namespace MonitorIotaNode
                 {
                     response = client.Execute(request);
                 }
+                catch (Exception e)
+                {
+                    Log.Logger.Error($"Error sending notification: {e.Message}");
+                }
                 finally
                 {
                     if (response != null && !response.IsSuccessful)
                     {
-                        Log.Logger.Error(response.ErrorMessage);
+                        Log.Logger.Error($"Error sending notification: {response.ErrorMessage}");
                         sendAllSucceeded = false;
                     }
                 }

@@ -53,15 +53,6 @@ namespace MonitorIotaNode
 
         public static Mana operator -(Mana manaOne, Mana manaTwo) => manaOne + (-manaTwo);
 
-        public static Mana operator /(Mana manaOne, Mana manaTwo)
-        {
-            if (manaTwo.Access == 0 || manaTwo.Consensus == 0)
-            {
-                throw new DivideByZeroException();
-            }
-            return new Mana(manaOne.Access / manaTwo.Access, manaOne.Consensus / manaTwo.Consensus);
-        }
-
         public static Mana operator *(Mana manaOne, Mana manaTwo) => new Mana(manaOne.Access * manaTwo.Access, manaOne.Consensus * manaTwo.Consensus);
 
         public static Mana operator *(Mana manaOne, int factor) => new Mana(manaOne.Access * factor, manaOne.Consensus * factor);

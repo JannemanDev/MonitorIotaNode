@@ -13,14 +13,14 @@ namespace MonitorIotaNode
         public DateTime LastChange { get; private set; }
         public string Filename { get; private set; }
 
-        private const int minimumFileAgeInSeconds = 5;
+        private TimeSpan minimumFileAgeInSeconds = new TimeSpan(0, 0, 5); //h,m,s
         private readonly FileSystemWatcher watcher;
         private Action<SettingsWatcher> eventHandler;
 
         public SettingsWatcher(string filename, Action<SettingsWatcher> eventHandler)
         {
             Filename = filename;
-            LastChange = DateTime.MinValue;
+            LastChange = DateTime.Now;
             this.eventHandler = eventHandler;
 
             if (File.Exists(filename))
@@ -35,9 +35,9 @@ namespace MonitorIotaNode
         private void Watcher_Changed(object sender, FileSystemEventArgs e)
         {
             Log.Logger.Debug($"Watcher_Changed called");
-            int fileAgeInSeconds = (DateTime.Now - LastChange).Seconds;
-            Log.Logger.Debug($"Fileage is {fileAgeInSeconds}");
-            if (fileAgeInSeconds > minimumFileAgeInSeconds && !IsFileLocked(e.FullPath)) //Avoid code executing multiple times  
+            TimeSpan fileAge = DateTime.Now - LastChange;
+            Log.Logger.Debug($"Fileage is {fileAge}");
+            if (fileAge > minimumFileAgeInSeconds && !IsFileLocked(e.FullPath)) //Avoid code executing multiple times  
             {
                 Log.Logger.Information($"Settings in {watcher.Filter} changed!");
                 LastChange = DateTime.Now;

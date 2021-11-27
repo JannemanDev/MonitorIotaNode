@@ -110,6 +110,12 @@ namespace MonitorIotaNode
 
         [JsonProperty(Required = Required.Always)]
         public bool IncludeForSyncCheck { get; set; }
+
+        [JsonIgnore]
+        public bool PrevStateNodeDown { get; set; } = false;
+
+        [JsonIgnore]
+        public bool PrevStateSynced { get; set; } = true;
     }
 
     public class PushOver

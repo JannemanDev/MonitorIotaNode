@@ -26,6 +26,7 @@ namespace MonitorIotaNode
         public NodeInfo RetrieveNodeInfo()
         {
             IRestResponse response = client.Get(request);
+            if (!response.IsSuccessful) throw new Exception($"Error requesting {Uri.AbsoluteUri}");
             string json = response.Content;
             return JsonConvert.DeserializeObject<NodeInfo>(json);
         }
