@@ -63,3 +63,7 @@ Cross platform .NET 5 util, which is very easy to use and requires no external d
 - beside push notification also support sending a notification email  
 - adding configurable `SeriLog` settings in `settings.json`
 - ...
+
+# Donation
+
+I appreciate any donation: *iota1qrl7m2y7cn829lwx47tvxpzrelfk5amvxphyretdd2n5spxctpsfzmqe8pv*
