@@ -66,4 +66,4 @@ Cross platform .NET 5 util, which is very easy to use and requires no external d
 
 # Donation
 
-I appreciate any donation: *iota1qrl7m2y7cn829lwx47tvxpzrelfk5amvxphyretdd2n5spxctpsfzmqe8pv*
+I appreciate any donation: `iota1qrl7m2y7cn829lwx47tvxpzrelfk5amvxphyretdd2n5spxctpsfzmqe8pv`
