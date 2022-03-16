@@ -1,4 +1,6 @@
 ﻿using Newtonsoft.Json;
+using Serilog;
+using Serilog.Events;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -21,6 +23,8 @@ namespace MonitorIotaNode
 
         [JsonProperty(Required = Required.Always)]
         public PushOver PushOver { get; set; }
+
+        public Logging Logging { get; set; }
 
         [JsonIgnore]
         public List<string> IncludedDeviceNames => PushOver
@@ -68,7 +72,21 @@ namespace MonitorIotaNode
                 Enabled = true
             };
             settings.IotaNodes = new List<IotaNode>() { new IotaNode() { DashboardUrl = new Uri("http://localhost:8081/dashboard"), InfoUrl = new Uri("http://localhost:8080/info"), IncludeForStatusCheck = true, IncludeForSyncCheck = true } };
-            settings.PushOver = new PushOver() { Enabled=true, ApiKey = "Fill me in, login into https://pushover.net/", UserKey = "Fill me in, login into https://pushover.net/", Devices = new List<Device>() { new Device() { Name = "Fill me in, login into https://pushover.net/", Include = true } } };
+            settings.PushOver = new PushOver() { Enabled = true, ApiKey = "Fill me in, login into https://pushover.net/", UserKey = "Fill me in, login into https://pushover.net/", Devices = new List<Device>() { new Device() { Name = "Fill me in, login into https://pushover.net/", Include = true } } };
+            settings.Logging = new Logging()
+            {
+                MinimumLevel = LogEventLevel.Verbose,
+                File = new FileLogging()
+                {
+                    Enabled = true,
+                    Path = "Logs/log.txt",
+                    RollingInterval = RollingInterval.Day,
+                    RollOnFileSizeLimit = true,
+                    RestrictedToMinimumLevel = LogEventLevel.Verbose
+                },
+                Console = new ConsoleLogging() { Enabled = true, RestrictedToMinimumLevel = LogEventLevel.Information }
+            };
+
             return settings;
         }
 
@@ -85,7 +103,7 @@ namespace MonitorIotaNode
         [JsonProperty(Required = Required.Always)]
         public int IntervalInMinutes
         {
-            get => intervalInMinutes; 
+            get => intervalInMinutes;
             set
             {
                 if (value < 1) throw new FormatException("IntervalInMinutes must be >=1");

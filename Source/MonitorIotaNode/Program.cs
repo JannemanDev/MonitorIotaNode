@@ -21,16 +21,13 @@ namespace MonitorIotaNode
 
         static void Main(string[] args)
         {
+            //Create default minimal logger until settings are loaded
             Log.Logger = new LoggerConfiguration()
-                .MinimumLevel.Verbose() //send all events to sinks
-                .WriteTo.Console(restrictedToMinimumLevel: LogEventLevel.Debug) //Todo: be configurable
-                .WriteTo.File("Logs/log.txt", //Todo: be configurable
-                    rollingInterval: RollingInterval.Day,
-                    rollOnFileSizeLimit: true,
-                    restrictedToMinimumLevel: LogEventLevel.Verbose) //Todo: be configurable
-                .CreateLogger();
+             .MinimumLevel.Verbose() //send all events to sinks
+             .WriteTo.Console(restrictedToMinimumLevel: LogEventLevel.Debug)
+             .CreateLogger();
 
-            Log.Logger.Information(("Monitor IOTA Nodes v0.1\n"));
+            Log.Logger.Information(("Monitor IOTA Nodes v1.1\n"));
             Log.Logger.Information(" <Escape> to quit");
             Log.Logger.Information(" <L> force reload of settings");
 
@@ -43,6 +40,8 @@ namespace MonitorIotaNode
                 Settings.SaveSettings(settingsFile, Settings.DefaultSettings());
                 Environment.Exit(1);
             }
+
+            InitLogging();
 
             //Todo: temporary solution for error: "The SSL connection could not be established, see inner exception."
             //       when using RestSharp.
@@ -433,6 +432,25 @@ namespace MonitorIotaNode
         public static long SecondsSinceEpoch()
         {
             return SecondsSinceEpoch(DateTime.UtcNow);
+        }
+
+        private static void InitLogging()
+        {
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Is(settings.Logging.MinimumLevel)
+                .WriteTo.Console(restrictedToMinimumLevel: settings.Logging.Console.RestrictedToMinimumLevel)
+                .WriteTo.File(
+                    path: settings.Logging.File.Path,
+                    rollingInterval: settings.Logging.File.RollingInterval,
+                    rollOnFileSizeLimit: settings.Logging.File.RollOnFileSizeLimit,
+                    restrictedToMinimumLevel: settings.Logging.File.RestrictedToMinimumLevel)
+                //.WriteTo.Logger(
+                //    x => x.Filter.ByIncludingOnly(y => y.ToString().ToLower().Contains("transaction"))
+                //        .WriteTo.File("transaction.log",
+                //            rollingInterval: RollingInterval.Day,
+                //            rollOnFileSizeLimit: true
+                //        ))
+                .CreateLogger();
         }
     }
 }
