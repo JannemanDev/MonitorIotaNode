@@ -65,7 +65,21 @@ export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
         "Include": true
       }
     ]
-  }
+  },
+  "Logging": {
+        "MinimumLevel": "Verbose",
+        "File": {
+            "Enabled": true,
+            "Path": "Logs/log.txt",
+            "RollingInterval": "Day",
+            "RollOnFileSizeLimit": true,
+            "RestrictedToMinimumLevel": "Verbose"
+        },
+        "Console": {
+            "Enabled": true,
+            "RestrictedToMinimumLevel": "Information"
+        }
+    }  
 }
 
 ```
