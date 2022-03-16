@@ -1,57 +1,59 @@
-set version=1.0
-set dotnetcore=net5.0
+set version=1.1
+set dotnetcore=net6.0
+set solutionfolder=C:\Users\JanOonk\source\repos\MonitorIotaNode\
+set projectsubfolder=source\MonitorIotaNode\
+set project=MonitorIotaNode
+set release=Release
 
 rem Root solution folder
-cd /d "C:\Users\Jan Oonk\Source\repos\MonitorIotaNode"
+if not exist "%solutionfolder%" (goto error)
+if not exist "%solutionfolder%%projectsubfolder%" (goto error)
+cd /d %solutionfolder%
 
+rem Delete previous Builds folder
+if exist "Builds\%dotnetcore%\" rmdir /q /s Builds\%dotnetcore%
+mkdir Builds\%dotnetcore%
 
-rem Delete Builds folder
-del /f /q /s Builds\*.* > nul
-rmdir /q /s Builds
-mkdir Builds
+rem Delete previous bin folder of project (will get auto created when building)
+if exist "%projectsubfolder%bin\%release%\%dotnetcore%\" rmdir /q /s "%projectsubfolder%bin\%release%\%dotnetcore%\"
 
+rem Public .NET Core versions
+dotnet publish %projectsubfolder%%project%.csproj /p:PublishProfile=%projectsubfolder%Properties\PublishProfiles\linux-arm-%dotnetcore%.pubxml --configuration %release%
+dotnet publish %projectsubfolder%%project%.csproj /p:PublishProfile=%projectsubfolder%Properties\PublishProfiles\linux-x64-%dotnetcore%.pubxml --configuration %release%
+dotnet publish %projectsubfolder%%project%.csproj /p:PublishProfile=%projectsubfolder%Properties\PublishProfiles\osx-x64-%dotnetcore%.pubxml --configuration %release%
+dotnet publish %projectsubfolder%%project%.csproj /p:PublishProfile=%projectsubfolder%Properties\PublishProfiles\win-x64-%dotnetcore%.pubxml --configuration %release%
+dotnet publish %projectsubfolder%%project%.csproj /p:PublishProfile=%projectsubfolder%Properties\PublishProfiles\win-x86-%dotnetcore%.pubxml --configuration %release%
 
-rem Delete bin folder of MonitorIotaNode
-del /f /q /s Source\MonitorIotaNode\bin\*.* > nul
-rmdir /q /s Source\MonitorIotaNode\bin
+rem Check if building above worked
+if not exist "%projectsubfolder%bin\%release%\%dotnetcore%\publish\" (goto error)
 
-rem .NET Core 5
-dotnet publish Source\MonitorIotaNode\MonitorIotaNode.csproj /p:PublishProfile=Source\MonitorIotaNode\Properties\PublishProfiles\linux-arm.pubxml --configuration Release
-dotnet publish Source\MonitorIotaNode\MonitorIotaNode.csproj /p:PublishProfile=Source\MonitorIotaNode\Properties\PublishProfiles\linux-x64.pubxml --configuration Release
-dotnet publish Source\MonitorIotaNode\MonitorIotaNode.csproj /p:PublishProfile=Source\MonitorIotaNode\Properties\PublishProfiles\osx-x64.pubxml --configuration Release
-dotnet publish Source\MonitorIotaNode\MonitorIotaNode.csproj /p:PublishProfile=Source\MonitorIotaNode\Properties\PublishProfiles\win-x64.pubxml --configuration Release
-dotnet publish Source\MonitorIotaNode\MonitorIotaNode.csproj /p:PublishProfile=Source\MonitorIotaNode\Properties\PublishProfiles\win-x86.pubxml --configuration Release
+rem Rar all project builds
+cd /d "%solutionfolder%"
+cd %projectsubfolder%bin\%release%\%dotnetcore%\publish\linux-arm\
+"C:\Program Files\WinRAR\rar.exe" a -r ..\..\..\..\..\..\..\Builds\%dotnetcore%\%project%-%version%-linux-arm-%dotnetcore%.rar *.*
 
-rem .NET Core 3.1
-dotnet publish Source\MonitorIotaNode\MonitorIotaNode.csproj /p:PublishProfile=Source\MonitorIotaNode\Properties\PublishProfiles\linux-arm-netcoreapp3.1.pubxml --configuration Release
+cd /d "%solutionfolder%"
+cd %projectsubfolder%bin\%release%\%dotnetcore%\publish\linux-x64\
+"C:\Program Files\WinRAR\rar.exe" a -r ..\..\..\..\..\..\..\Builds\%dotnetcore%\%project%-%version%-linux-x64-%dotnetcore%.rar *.*
 
-rem Rar all MonitorIotaNode builds
-rem .NET Core 5
-cd /d "C:\Users\Jan Oonk\Source\repos\MonitorIotaNode"
-cd Source\MonitorIotaNode\bin\Release\net5.0\publish\linux-arm\
-"C:\Program Files\WinRAR\rar.exe" a -r ..\..\..\..\..\..\..\Builds\MonitorIotaNode-%version%-linux-arm-%dotnetcore%.rar *.*
+cd /d "%solutionfolder%"
+cd %projectsubfolder%bin\%release%\%dotnetcore%\publish\osx-x64\
+"C:\Program Files\WinRAR\rar.exe" a -r ..\..\..\..\..\..\..\Builds\%dotnetcore%\%project%-%version%-osx-x64-%dotnetcore%.rar *.*
 
-cd /d "C:\Users\Jan Oonk\Source\repos\MonitorIotaNode"
-cd Source\MonitorIotaNode\bin\Release\net5.0\publish\linux-x64\
-"C:\Program Files\WinRAR\rar.exe" a -r ..\..\..\..\..\..\..\Builds\MonitorIotaNode-%version%-linux-x64-%dotnetcore%.rar *.*
+cd /d "%solutionfolder%"
+cd %projectsubfolder%bin\%release%\%dotnetcore%\publish\win-x64\
+"C:\Program Files\WinRAR\rar.exe" a -r ..\..\..\..\..\..\..\Builds\%dotnetcore%\%project%-%version%-win-x64-%dotnetcore%.rar *.*
 
-cd /d "C:\Users\Jan Oonk\Source\repos\MonitorIotaNode"
-cd Source\MonitorIotaNode\bin\Release\net5.0\publish\osx-x64\
-"C:\Program Files\WinRAR\rar.exe" a -r ..\..\..\..\..\..\..\Builds\MonitorIotaNode-%version%-osx-x64-%dotnetcore%.rar *.*
+cd /d "%solutionfolder%"
+cd %projectsubfolder%bin\%release%\%dotnetcore%\publish\win-x86\
+"C:\Program Files\WinRAR\rar.exe" a -r ..\..\..\..\..\..\..\Builds\%dotnetcore%\%project%-%version%-win-x86-%dotnetcore%.rar *.*
 
-cd /d "C:\Users\Jan Oonk\Source\repos\MonitorIotaNode"
-cd Source\MonitorIotaNode\bin\Release\net5.0\publish\win-x64\
-"C:\Program Files\WinRAR\rar.exe" a -r ..\..\..\..\..\..\..\Builds\MonitorIotaNode-%version%-win-x64-%dotnetcore%.rar *.*
+cd /d "%solutionfolder%"
 
-cd /d "C:\Users\Jan Oonk\Source\repos\MonitorIotaNode"
-cd Source\MonitorIotaNode\bin\Release\net5.0\publish\win-x86\
-"C:\Program Files\WinRAR\rar.exe" a -r ..\..\..\..\..\..\..\Builds\MonitorIotaNode-%version%-win-x86-%dotnetcore%.rar *.*
+goto done
 
-rem Rar all MonitorIotaNode builds
-rem .NET Core 3.1
-cd /d "C:\Users\Jan Oonk\Source\repos\MonitorIotaNode"
-cd Source\MonitorIotaNode\bin\Release\netcoreapp3.1\publish\linux-arm\
-"C:\Program Files\WinRAR\rar.exe" a -r ..\..\..\..\..\..\..\Builds\MonitorIotaNode-%version%-linux-arm-netcoreapp3.1.rar *.*
+:error
+echo Something went wrong. Directory does not exist!
+goto done
 
-
-cd /d "C:\Users\Jan Oonk\Source\repos\MonitorIotaNode"
+:done

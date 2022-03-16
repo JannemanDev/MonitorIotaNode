@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Serilog;
 using Serilog.Events;
 using System.Linq;
@@ -46,11 +44,18 @@ namespace MonitorIotaNode
                 Environment.Exit(1);
             }
 
+            //Todo: temporary solution for error: "The SSL connection could not be established, see inner exception."
+            //       when using RestSharp.
+            //      Postman generates a warning: "Unable to verify the first certificate"
+            ServicePointManager.ServerCertificateValidationCallback +=
+                (sender, certificate, chain, sslPolicyErrors) => true;
+
             //settingsFile = $"c:\temp\settings.json"; //override for testing purposes
 
             Log.Logger.Information($"Loading settings from {settingsFile}\n");
 
             ReloadSettings();
+
             SettingsWatcher settingsWatcher = new SettingsWatcher(settingsFile, SettingsChanged);
 
             while (true)
@@ -287,10 +292,17 @@ namespace MonitorIotaNode
                         if (iotaNode.PrevStateSynced) //...and not out of sync last time (to avoid sending repeatedly)
                         {
                             iotaNode.PrevStateSynced = false;
-                            if (iotaNode.PrevStateNodeDown) title = $"Node {nodeInfo.IdentityIdShort} back online but still NOT synced!";
+
+                            if (iotaNode.PrevStateNodeDown) title = $"Node {nodeInfo.IdentityIdShort} back online but NOT synced!";
                             else title = $"Node {nodeInfo.IdentityIdShort} NOT synced!";
+
                             Log.Logger.Information($"Sending a notification:\n{title}\n{message}");
+
                             SendNotifications(settings.PushOver.ApiKey, settings.PushOver.UserKey, settings.IncludedDeviceNames, title, message);
+                        }
+                        else
+                        {
+                            //still unsynced so do not send again notification
                         }
                     }
                     else //in sync...
@@ -300,9 +312,25 @@ namespace MonitorIotaNode
                             iotaNode.PrevStateSynced = true;
                             if (iotaNode.PrevStateNodeDown) title = $"Node {nodeInfo.IdentityIdShort} back online and synced again!";
                             else title = $"Node {nodeInfo.IdentityIdShort} synced again!";
+
                             Log.Logger.Information($"Sending a notification:\n{title}\n{message}");
 
                             SendNotifications(settings.PushOver.ApiKey, settings.PushOver.UserKey, settings.IncludedDeviceNames, title, message);
+                        }
+                        else //...and also previously or last time checked in sync
+                        {
+                            if (iotaNode.PrevStateNodeDown) //..node is currently up but was it down previous?
+                            {
+                                title = $"Node {nodeInfo.IdentityIdShort} back online and still synced!";
+
+                                Log.Logger.Information($"Sending a notification:\n{title}\n{message}");
+
+                                SendNotifications(settings.PushOver.ApiKey, settings.PushOver.UserKey, settings.IncludedDeviceNames, title, message);
+                            }
+                            else
+                            {
+                                //don't send notification since it's still reachable and in sync
+                            }
                         }
                     }
 
@@ -381,13 +409,13 @@ namespace MonitorIotaNode
                 }
                 catch (Exception e)
                 {
-                    Log.Logger.Error($"Error sending notification: {e.Message}");
+                    Log.Logger.Error($"Error sending notification: {e.Message}{Environment.NewLine}{e.InnerException.Message}");
                 }
                 finally
                 {
                     if (response != null && !response.IsSuccessful)
                     {
-                        Log.Logger.Error($"Error sending notification: {response.ErrorMessage}");
+                        Log.Logger.Error($"Error sending notification: {response.ErrorMessage}{Environment.NewLine}{response.ErrorException.InnerException.Message}");
                         sendAllSucceeded = false;
                     }
                 }
