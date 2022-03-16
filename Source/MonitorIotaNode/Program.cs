@@ -41,8 +41,6 @@ namespace MonitorIotaNode
                 Environment.Exit(1);
             }
 
-            InitLogging();
-
             //Todo: temporary solution for error: "The SSL connection could not be established, see inner exception."
             //       when using RestSharp.
             //      Postman generates a warning: "Unable to verify the first certificate"
@@ -80,6 +78,8 @@ namespace MonitorIotaNode
 
             Settings prevSettings = settings;
             settings = Settings.LoadSettings(settingsFile);
+
+            InitLogging();
 
             //only copy settings when available
             if (prevSettings != null)
