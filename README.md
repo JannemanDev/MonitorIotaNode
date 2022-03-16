@@ -90,7 +90,6 @@ export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
 # Next release / roadmap / todo
 - finding a workaround for Unix/Linux limitation of `FileSystemWatcher`  
 - beside push notification also support sending a notification email  
-- adding configurable `SeriLog` settings in `settings.json`
 - ...
 
 # Donation
