@@ -3,6 +3,19 @@ Cross platform .NET 6 util, which is very easy to use and requires no external d
 
 Tested on Ubuntu 20.10, 21.10 and 22.04 and Windows 11
 
+On Ubuntu you can get this error:
+```console
+Process terminated. Couldn't find a valid ICU package installed on the system. Please install libicu using your package manager and try again. Alternatively you can set the configuration flag System.Globa
+lization.Invariant to true if you want to run with no globalization support. Please see https://aka.ms/dotnet-missing-libicu for more information. 
+```
+
+Use this shell script as solution:
+```console
+#!/bin/bash
+export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
+./MonitorIotaNode
+```
+
 # Features
 -Monitor one or more nodes  
 -Configurable time interval for status checking and sync checking  
