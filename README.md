@@ -85,11 +85,12 @@ export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
 ```
 # Current limitations
 -On Unix/Linux machines auto reload when settings are changed doesn't work because of a limitation of `FileSystemWatcher`.  
--If you are using The Goshimmer Node Dashboard website (see `IotaNodes > DashboardUrl` in `settings.json`) mind you that it's currently not supported on _mobile_ webbrowsers. You will see a webpage but nothing gets updated.
 
 # Next release / roadmap / todo
 - finding a workaround for Unix/Linux limitation of `FileSystemWatcher`  
 - beside push notification also support sending a notification email  
+- seperate (un)sync event log  
+- add extra stats in status message like nr of sync losses, min/max/avg time to resync 
 - ...
 
 # Donation
