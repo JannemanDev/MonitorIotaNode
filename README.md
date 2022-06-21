@@ -91,6 +91,7 @@ export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
 - beside push notification also support sending a notification email  
 - seperate (un)sync event log  
 - add extra stats in status message like nr of sync losses, min/max/avg time to resync 
+- dockerized version  
 - ...
 
 # Donation
